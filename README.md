@@ -38,4 +38,4 @@ I'm a neovim noob. This plugin was made for personal use. 🙏
 
 ## Video
 
-[![Preview](https://raw.githubusercontent.com/resonyze/doc-window.nvim/master/screenshots/screenshot.png)](https://github.com/resonyze/doc-window.nvim/raw/master/screenshots/screen.mp4)
+[![Preview](https://raw.githubusercontent.com/resonyze/doc-window.nvim/master/screenshots/screenshot.png)](https://www.youtube.com/watch?v=8dvZCqLEaKU)
