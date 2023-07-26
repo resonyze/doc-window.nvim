@@ -72,13 +72,13 @@ end
 
 M.display_doc = function(options)
   local winnr = vim.fn.bufwinnr('^_output$')
-  local winid = vim.fn.bufwinid('^_output$')
   if winnr < 0 then
     local curwin = vim.api.nvim_get_current_win()
     vim.api.nvim_command('bel 10new _output')
     vim.cmd('setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap winfixheight')
     vim.api.nvim_set_current_win(curwin)
   end
+  local winid = vim.fn.bufwinid('^_output$')
 
   local bufnr = vim.fn.bufnr('^_output$')
   vim.api.nvim_buf_set_option(bufnr, 'filetype', 'markdown')
