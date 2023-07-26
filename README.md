@@ -35,3 +35,7 @@ As picked up by lazy.nvim:
 ## Warning
 
 I'm a neovim noob. This plugin was made for personal use. 🙏
+
+## Video
+
+[![Preview](https://raw.githubusercontent.com/resonyze/doc-window.nvim/master/screenshots/screenshot.png)](https://github.com/resonyze/doc-window.nvim/raw/master/screenshots/screen.mp4)
