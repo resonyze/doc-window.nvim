@@ -1,3 +1,5 @@
+local ts_utils = require 'nvim-treesitter.ts_utils'
+
 local M = {}
 
 M.request = function(method, params, handler)
@@ -9,7 +11,6 @@ M.request = function(method, params, handler)
 end
 
 M.get_tag_position = function()
-  local ts_utils = require 'nvim-treesitter.ts_utils'
   local winnid = vim.fn.win_getid()
 
   local cn = ts_utils.get_node_at_cursor(winnid)
@@ -70,27 +71,104 @@ M.scroll_up = function()
   vim.api.nvim_win_call(winid, M._scroll_up)
 end
 
+M.lsp_callback = function(err, result, ctx)
+  local bufnr = vim.fn.bufnr('^_output$')
+  local winid = vim.fn.bufwinid('^_output$')
+  if err then
+    print("Error:", err)
+    return
+  end
+
+  local response_text = result and result.contents.value or "No hover information"
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
+
+  -- if not result then
+  --   local match = false
+  --   local cn = ts_utils.get_node_at_cursor(0)
+  --   while cn ~= nil do
+  --     if cn:type() == "selector" and cn:prev_sibling():type() == "identifier" then
+  --       match = true
+  --       break
+  --     end
+  --     cn = cn:parent()
+  --   end
+  --
+  --   if match == true then
+  --     cn = cn:prev_sibling()
+  --     local start_row, start_col = cn:start()
+  --     M.request('textDocument/hover', { line = start_row, character = start_col }, M.lsp_callback)
+  --     return
+  --   end
+  --
+  -- else
+  --   local response_text = result.contents.value
+  --   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
+  -- end
+
+  if winid > 0 then
+    vim.api.nvim_win_set_cursor(winid, { 1, 1 })
+  end
+end
+
 M.display_doc = function(options)
-  local winnr = vim.fn.bufwinnr('^_output$')
+  -- local bufnr = vim.fn.bufnr('^_output$')
+  local bufnr = vim.api.nvim_get_current_buf()
+  local winid = vim.fn.bufwinid('^_output' .. bufnr .. '$')
+  local winnr = vim.fn.bufwinnr('^_output' .. bufnr .. '$')
   if winnr < 0 then
     local curwin = vim.api.nvim_get_current_win()
-    vim.api.nvim_command('bel 10new _output')
+    local height = vim.api.nvim_win_get_height(curwin) * 5
+    local width = vim.api.nvim_win_get_width(curwin) * 2
+
+    if height > width then
+      vim.api.nvim_command('bel 10new _output' .. bufnr)
+    else
+      vim.api.nvim_command('90vnew _output' .. bufnr)
+    end
+
+    -- vim.api.nvim_command('bel 10new _output')
     vim.cmd('setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap winfixheight')
     vim.api.nvim_set_current_win(curwin)
   end
-  local winid = vim.fn.bufwinid('^_output$')
 
-  local bufnr = vim.fn.bufnr('^_output$')
-  vim.api.nvim_buf_set_option(bufnr, 'filetype', 'markdown')
+  local docwinnr = vim.fn.bufnr('^_output' .. bufnr .. '$')
+  vim.api.nvim_buf_set_option(docwinnr, 'filetype', 'markdown')
 
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
 
-  local position
+  local position, request, callback
 
   if options.tag == true then
     position = M.get_tag_position()
   else
     position = { line = cursor_pos[1] - 1, character = cursor_pos[2] }
+  end
+
+  if options.sig == true then
+    request = "textDocument/signatureHelp"
+    callback = function(err, result, ctx)
+      if err then
+        print("Error:", err)
+        return
+      end
+
+      local response_text = result and
+        "```dart\n" .. string.gsub(result.signatures[1].label, ',', ',\n') .. "\n```"
+          or "No signature help"
+
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
+    end
+  else
+    request = "textDocument/hover"
+    callback = function(err, result, ctx)
+      if err then
+        print("Error:", err)
+        return
+      end
+
+      local response_text = result and result.contents.value or "No hover information"
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
+    end
   end
 
   local paramss = {
@@ -99,21 +177,10 @@ M.display_doc = function(options)
     position = position
   }
 
-
-  M.request('textDocument/hover', paramss, function(err, result, ctx)
-    if err then
-      print("Error:", err)
-      return
-    end
-
-    -- vim.notify(vim.inspect(result))
-    local response_text = result and result.contents.value or "No hover information"
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
-
-    if winid > 0 then
-      vim.api.nvim_win_set_cursor(winid, { 1, 1 })
-    end
-  end)
+  M.request(request, paramss, callback)
+  if winid > 0 then
+    vim.api.nvim_win_set_cursor(winid, { 1, 1 })
+  end
 end
 
 return M
