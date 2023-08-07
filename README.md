@@ -34,8 +34,9 @@ As picked up by lazy.nvim:
 
 ## Warning
 
-I'm a neovim noob. This plugin was made for personal use. 🙏
+This plugin was made for personal use. It works for me, for now. Its probably not ready for publishing but I'm
+doing it anyway.
 
-## Video
+## Screnshots
 
-[![Preview](https://raw.githubusercontent.com/resonyze/doc-window.nvim/master/screenshots/screenshot.png)](https://www.youtube.com/watch?v=8dvZCqLEaKU)
+![Screenshot](https://raw.githubusercontent.com/resonyze/doc-window.nvim/master/screenshots/1691402880.png) 
