@@ -45,7 +45,14 @@ M._scroll_down = function()
 end
 
 M.scroll_down = function()
-  local winid = vim.fn.bufwinid('^_output$')
+  local bufno = vim.api.nvim_get_current_buf()
+  local winid = vim.fn.bufwinid('_output' .. bufno)
+
+  if winid < 0 then
+    M.display_doc({ tag = false, sig = false })
+    return
+  end
+
   vim.api.nvim_win_call(winid, M._scroll_down)
 end
 
@@ -67,7 +74,14 @@ M._scroll_up = function()
 end
 
 M.scroll_up = function()
-  local winid = vim.fn.bufwinid('^_output$')
+  local bufno = vim.api.nvim_get_current_buf()
+  local winid = vim.fn.bufwinid('_output' .. bufno)
+
+  if winid < 0 then
+    M.display_doc({ tag = false, sig = false })
+    return
+  end
+
   vim.api.nvim_win_call(winid, M._scroll_up)
 end
 
@@ -80,7 +94,24 @@ M.lsp_callback = function(err, result, ctx)
   end
 
   local response_text = result and result.contents.value or "No hover information"
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
+
+  local command = { "fmt", "-w", "1000" }
+
+  local job_id = vim.fn.jobstart(
+    command,
+    {
+      on_stdout = function(_, data)
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(data, "\n"))
+      end,
+      stdout_buffered = true,
+      stderr = true,
+    }
+  )
+
+  vim.fn.chansend(job_id, response_text)
+  vim.fn.chanclose(job_id, "stdin")
+  vim.fn.jobwait({ job_id }, "w")
+
 
   -- if not result then
   --   local match = false
@@ -123,16 +154,16 @@ M.display_doc = function(options)
     if height > width then
       vim.api.nvim_command('bel 10new _output' .. bufnr)
     else
-      vim.api.nvim_command('90vnew _output' .. bufnr)
+      vim.api.nvim_command('vnew _output' .. bufnr)
     end
 
     -- vim.api.nvim_command('bel 10new _output')
-    vim.cmd('setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile nowrap winfixheight')
+    vim.cmd('setlocal buftype=nofile bufhidden=wipe nobuflisted noswapfile wrap linebreak winfixheight')
     vim.api.nvim_set_current_win(curwin)
   end
 
-  local docwinnr = vim.fn.bufnr('^_output' .. bufnr .. '$')
-  vim.api.nvim_buf_set_option(docwinnr, 'filetype', 'markdown')
+  bufnr = vim.fn.bufnr('^_output' .. bufnr .. '$')
+  vim.api.nvim_buf_set_option(bufnr, 'filetype', 'markdown')
 
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
 
@@ -153,7 +184,7 @@ M.display_doc = function(options)
       end
 
       local response_text = result and
-        "```dart\n" .. string.gsub(result.signatures[1].label, ',', ',\n') .. "\n```"
+          "```dart\n" .. string.gsub(result.signatures[1].label, ',', ',\n') .. "\n```"
           or "No signature help"
 
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
@@ -166,8 +197,29 @@ M.display_doc = function(options)
         return
       end
 
+
       local response_text = result and result.contents.value or "No hover information"
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
+      local code_block = vim.split(response_text:match("```.-```"), "\n")
+      response_text = response_text:gsub("```.-```", "")
+
+      local command = { "fmt", "-w", "1000" }
+
+      local job_id = vim.fn.jobstart(
+        command,
+        {
+          on_stdout = function(_, data)
+            for _, value in ipairs(data) do
+              table.insert(code_block, value)
+            end
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, code_block)
+          end,
+          stdout_buffered = true,
+          stderr = true,
+        }
+      )
+
+      vim.fn.chansend(job_id, response_text)
+      vim.fn.chanclose(job_id, "stdin")
     end
   end
 
