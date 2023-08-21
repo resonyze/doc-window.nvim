@@ -12,21 +12,23 @@ As picked up by lazy.nvim:
     config = function()
       local dw = require("doc-window")
 
-      vim.keymap.set({ 'n', 'i' }, '<M-h>',
-        function()
-          dw.display_doc({ tag = false })
-        end,
-        { desc = "Display LSP documentation in a window" })
-
       vim.keymap.set({ 'n', 'i' }, '<M-i>',
         function()
-          dw.display_doc({ tag = true })
+          dw.display_doc({ tag = false, sig = false })
         end,
-        { desc = "Display LSP documentation of closest parent tag node" })
+        { desc = "textDocument/hover under cursor" })
 
-      vim.keymap.set({ 'n', 'i' }, '<M-k>', dw.scroll_up, { desc = "LSP doc window scroll up" })
+      vim.keymap.set({ 'n', 'i' }, '<M-u>',
+        function()
+          dw.display_doc({ tag = true, sig = false })
+        end,
+        { desc = "textDocument/hover of nearest tag" })
 
-      vim.keymap.set({ 'n', 'i' }, '<M-j>', dw.scroll_down, { desc = "LSP doc window scroll down" })
+      vim.keymap.set({ 'n', 'i' }, '<M-n>',
+        function()
+          dw.display_doc({ tag = false, sig = true })
+        end,
+        { desc = "textDocument/signatureHelp under cursor" })
     end
   },
 
