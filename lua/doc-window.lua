@@ -85,62 +85,6 @@ M.scroll_up = function()
   vim.api.nvim_win_call(winid, M._scroll_up)
 end
 
-M.lsp_callback = function(err, result, ctx)
-  local bufnr = vim.fn.bufnr('^_output$')
-  local winid = vim.fn.bufwinid('^_output$')
-  if err then
-    print("Error:", err)
-    return
-  end
-
-  local response_text = result and result.contents.value or "No hover information"
-
-  local command = { "fmt", "-w", "1000" }
-
-  local job_id = vim.fn.jobstart(
-    command,
-    {
-      on_stdout = function(_, data)
-        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(data, "\n"))
-      end,
-      stdout_buffered = true,
-      stderr = true,
-    }
-  )
-
-  vim.fn.chansend(job_id, response_text)
-  vim.fn.chanclose(job_id, "stdin")
-  vim.fn.jobwait({ job_id }, "w")
-
-
-  -- if not result then
-  --   local match = false
-  --   local cn = ts_utils.get_node_at_cursor(0)
-  --   while cn ~= nil do
-  --     if cn:type() == "selector" and cn:prev_sibling():type() == "identifier" then
-  --       match = true
-  --       break
-  --     end
-  --     cn = cn:parent()
-  --   end
-  --
-  --   if match == true then
-  --     cn = cn:prev_sibling()
-  --     local start_row, start_col = cn:start()
-  --     M.request('textDocument/hover', { line = start_row, character = start_col }, M.lsp_callback)
-  --     return
-  --   end
-  --
-  -- else
-  --   local response_text = result.contents.value
-  --   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, "\n"))
-  -- end
-
-  if winid > 0 then
-    vim.api.nvim_win_set_cursor(winid, { 1, 1 })
-  end
-end
-
 M.display_doc = function(options)
   -- local bufnr = vim.fn.bufnr('^_output$')
   local bufnr = vim.api.nvim_get_current_buf()
@@ -199,19 +143,19 @@ M.display_doc = function(options)
 
 
       local response_text = result and result.contents.value or "No hover information"
-      local code_block = vim.split(response_text:match("```.-```"), "\n")
-      response_text = response_text:gsub("```.-```", "")
 
-      local command = { "fmt", "-w", "1000" }
+      -- local command = { "fmt", "-w", "1000" }
+      local command = { "prettier", "--parser", "markdown", "--prose-wrap", "always", "--print-width", "1000" }
 
       local job_id = vim.fn.jobstart(
         command,
         {
           on_stdout = function(_, data)
+            local output = {}
             for _, value in ipairs(data) do
-              table.insert(code_block, value)
+              table.insert(output, value)
             end
-            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, code_block)
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, output)
           end,
           stdout_buffered = true,
           stderr = true,
@@ -220,6 +164,7 @@ M.display_doc = function(options)
 
       vim.fn.chansend(job_id, response_text)
       vim.fn.chanclose(job_id, "stdin")
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(response_text, '\n'))
     end
   end
 
